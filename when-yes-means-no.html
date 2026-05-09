@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>When Yes Means No</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap');
+
+:root {
+  --bg:        #f6f3ee;
+  --surface:   #f0ece4;
+  --panel:     #e8e3d8;
+  --border:    #ccc5b0;
+  --border-hi: #a89878;
+  --text:      #1a1710;
+  --muted:     #7a7060;
+  --faint:     #b0a888;
+  --dim:       #ddd8cc;
+  --ink:       #12100a;
+
+  /* Performed — warm dusty rose */
+  --performed:     #8b4a5a;
+  --performed-dim: rgba(139,74,90,0.07);
+  --performed-b:   rgba(139,74,90,0.22);
+
+  /* Actual — slate blue */
+  --actual:        #3a5070;
+  --actual-dim:    rgba(58,80,112,0.07);
+  --actual-b:      rgba(58,80,112,0.22);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Spectral', serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle paper texture */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.038'/%3E%3C/svg%3E");
+  background-size: 400px;
+  pointer-events: none; z-index: 0; mix-blend-mode: multiply;
+}
+
+.screen { display: none; position: relative; z-index: 1; }
+.screen.active { display: flex; }
+
+/* Progress */
+.prog-wrap {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 1px; background: var(--dim); z-index: 200;
+}
+.prog-fill {
+  height: 100%; background: var(--ink);
+  transition: width 0.8s ease; width: 0%;
+}
+
+/* ── SAFEGUARDING OVERLAY ── */
+#safeguard {
+  position: fixed; inset: 0; z-index: 500;
+  background: var(--bg);
+  flex-direction: column; align-items: center;
+  justify-content: center; padding: clamp(2rem, 6vw, 5rem);
+  display: flex;
+}
+
+.safeguard-inner {
+  max-width: 480px; width: 100%;
+}
+
+.safeguard-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.52rem; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--faint);
+  margin-bottom: 2rem;
+}
+
+.safeguard-body {
+  font-size: clamp(0.92rem, 1.8vw, 1.1rem);
+  line-height: 2; color: var(--muted);
+  margin-bottom: 2.5rem;
+}
+
+.safeguard-body strong { color: var(--text); font-weight: 400; }
+
+.safeguard-note {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.52rem; letter-spacing: 0.1em;
+  color: var(--faint); line-height: 1.9;
+  padding: 0.9rem 1rem; border: 1px solid var(--border);
+  margin-bottom: 2rem; background: var(--surface);
+}
+
+.safeguard-btns { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.sg-btn {
+  background: var(--ink); color: var(--bg);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.56rem; letter-spacing: 0.22em;
+  text-transform: uppercase; padding: 0.85rem 1.5rem;
+  border: none; cursor: pointer; transition: background 0.2s;
+  text-align: center;
+}
+.sg-btn:hover { background: var(--performed); }
+
+.sg-exit {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted);
+}
+.sg-exit:hover { background: transparent; border-color: var(--border-hi); color: var(--text); }
+
+/* ── INTRO ── */
+#intro {
+  min-height: 100vh; flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(2.5rem, 6vw, 5rem);
+  max-width: 780px; margin: 0 auto; width: 100%;
+}
+
+.intro-header {
+  padding-bottom: 2rem; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+
+.intro-kicker {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--faint); line-height: 2;
+}
+
+.intro-id {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.12em;
+  color: var(--dim); text-align: right; line-height: 2;
+}
+
+.intro-body {
+  flex: 1; display: flex; flex-direction: column;
+  justify-content: center; padding: 4rem 0 3rem;
+}
+
+.intro-title {
+  font-family: 'Spectral', serif; font-weight: 300;
+  font-size: clamp(2.2rem, 6vw, 5rem);
+  line-height: 1; letter-spacing: -0.01em;
+  color: var(--ink); margin-bottom: 0.3rem;
+}
+
+.intro-title em { font-style: italic; color: var(--performed); }
+
+.intro-tagline {
+  font-family: 'Spectral', serif; font-style: italic;
+  font-size: clamp(0.95rem, 2vw, 1.2rem);
+  color: var(--muted); margin-bottom: 3rem;
+}
+
+.intro-premise {
+  font-size: clamp(0.88rem, 1.8vw, 1rem);
+  line-height: 2.1; color: var(--muted);
+  max-width: 480px; margin-bottom: 3rem;
+}
+.intro-premise strong { color: var(--text); font-weight: 400; }
+
+/* Two-axis preview */
+.axis-preview {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border); margin-bottom: 3rem;
+  background: var(--surface);
+}
+
+.axis-col {
+  padding: 0.9rem 1.1rem;
+  border-right: 1px solid var(--border);
+}
+.axis-col:last-child { border-right: none; }
+
+.axis-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.2em;
+  text-transform: uppercase; margin-bottom: 0.4rem;
+}
+.axis-col.performed-col .axis-label { color: var(--performed); }
+.axis-col.actual-col .axis-label { color: var(--actual); }
+
+.axis-desc {
+  font-size: 0.8rem; color: var(--muted); line-height: 1.7;
+}
+
+.begin-btn {
+  background: var(--ink); color: var(--bg);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.54rem; letter-spacing: 0.26em;
+  text-transform: uppercase; padding: 0.9rem 2.2rem;
+  border: none; cursor: pointer; transition: background 0.2s;
+  display: inline-block; align-self: flex-start;
+}
+.begin-btn:hover { background: var(--performed); }
+
+.intro-footer {
+  padding-top: 1.5rem; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between;
+  flex-wrap: wrap; gap: 0.5rem;
+}
+.intro-footer-note {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.1em; color: var(--faint);
+}
+
+/* ── PROMPT SCREEN ── */
+#room {
+  min-height: 100vh; flex-direction: column;
+  justify-content: center;
+  padding: clamp(2.5rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+  max-width: 780px; margin: 0 auto; width: 100%;
+}
+
+.room-hud {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 3.5rem; padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hud-counter {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.hud-note {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.1em; color: var(--faint);
+}
+
+/* Prompt */
+.prompt-text {
+  font-family: 'Spectral', serif; font-weight: 300;
+  font-size: clamp(1.15rem, 2.8vw, 1.7rem);
+  line-height: 1.45; color: var(--ink);
+  margin-bottom: 0.6rem;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.prompt-text.visible { opacity: 1; transform: translateY(0); }
+
+.prompt-sub {
+  font-family: 'Spectral', serif; font-style: italic;
+  font-size: 0.88rem; color: var(--muted);
+  line-height: 1.7; margin-bottom: 2.5rem;
+  opacity: 0; transition: opacity 0.4s ease 0.1s;
+}
+.prompt-sub.visible { opacity: 1; }
+
+/* The two sides */
+.sides-wrap {
+  display: grid; grid-template-columns: 1fr 1px 1fr;
+  margin-bottom: 1.5rem;
+  opacity: 0; transform: translateY(5px);
+  transition: opacity 0.45s ease 0.12s, transform 0.45s ease 0.12s;
+}
+.sides-wrap.visible { opacity: 1; transform: translateY(0); }
+
+.side-divider {
+  background: var(--border); position: relative;
+}
+
+.side-divider::after {
+  content: '//';
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; color: var(--faint);
+  white-space: nowrap;
+}
+
+.side-panel { padding: 0 0; }
+
+.side-panel.performed-panel { padding-right: 1.4rem; }
+.side-panel.actual-panel { padding-left: 1.4rem; }
+
+.side-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.2em;
+  text-transform: uppercase; margin-bottom: 0.6rem;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.performed-panel .side-label { color: var(--performed); }
+.actual-panel .side-label { color: var(--actual); }
+
+.side-prompt {
+  font-size: 0.82rem; color: var(--muted);
+  line-height: 1.7; margin-bottom: 0.7rem;
+  font-style: italic;
+}
+
+.side-input {
+  width: 100%; background: transparent;
+  border: none; border-bottom: 1px solid var(--border);
+  color: var(--ink); font-family: 'Spectral', serif;
+  font-size: 0.92rem; font-weight: 300;
+  padding: 0.55rem 0; resize: none; outline: none;
+  line-height: 1.85; transition: border-color 0.25s;
+  min-height: 75px;
+}
+.performed-panel .side-input:focus { border-bottom-color: var(--performed); }
+.actual-panel .side-input:focus { border-bottom-color: var(--actual); }
+.side-input::placeholder { color: var(--faint); font-style: italic; }
+
+.side-hint {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.42rem; letter-spacing: 0.1em;
+  color: var(--faint); margin-top: 0.3rem; min-height: 1em;
+}
+
+/* Nav */
+.room-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 1.5rem; margin-top: 0.5rem;
+  border-top: 1px solid var(--dim);
+}
+
+.nav-note {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.42rem; color: var(--faint); letter-spacing: 0.08em;
+}
+
+.nav-btn {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); font-family: 'DM Mono', monospace;
+  font-size: 0.52rem; letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 0.5rem 1.1rem; cursor: pointer; transition: all 0.18s;
+}
+.nav-btn:hover:not(:disabled) { border-color: var(--border-hi); color: var(--text); }
+.nav-btn:disabled { opacity: 0.18; cursor: default; pointer-events: none; }
+.nav-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.nav-btn.primary:hover { background: var(--performed); border-color: var(--performed); }
+
+/* Processing */
+.processing {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.46rem; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase;
+}
+.dots-inline { display: inline-flex; gap: 0.25rem; margin-left: 0.35rem; vertical-align: middle; }
+.dots-inline span {
+  width: 3px; height: 3px; background: var(--muted); border-radius: 50%;
+  animation: dp 1.2s ease-in-out infinite;
+}
+.dots-inline span:nth-child(2) { animation-delay: 0.2s; }
+.dots-inline span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dp {
+  0%,100% { opacity: 0.2; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* ── READING ── */
+#reading {
+  min-height: 100vh; flex-direction: column; justify-content: center;
+  padding: clamp(2rem, 6vw, 5rem); max-width: 780px; margin: 0 auto; width: 100%;
+}
+.reading-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.48rem; letter-spacing: 0.32em;
+  color: var(--faint); text-transform: uppercase; margin-bottom: 1.5rem;
+}
+.reading-dots { display: flex; gap: 0.45rem; }
+.reading-dots span {
+  width: 5px; height: 5px; background: var(--ink); border-radius: 50%;
+  animation: dp 1.4s ease-in-out infinite;
+}
+.reading-dots span:nth-child(2) { animation-delay: 0.25s; }
+.reading-dots span:nth-child(3) { animation-delay: 0.5s; }
+
+/* ── RESULT ── */
+#result {
+  min-height: 100vh; flex-direction: column; justify-content: flex-start;
+  padding: clamp(4rem, 8vw, 6rem) clamp(1.5rem, 5vw, 4rem) 7rem;
+  max-width: 780px; margin: 0 auto; width: 100%;
+}
+
+.result-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 3.5rem; padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.result-title {
+  font-family: 'Spectral', serif; font-weight: 300;
+  font-size: 1rem; letter-spacing: 0.04em; color: var(--ink);
+}
+
+.result-title em { font-style: italic; color: var(--performed); }
+
+.result-stamp {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.42rem; letter-spacing: 0.1em;
+  color: var(--faint); text-align: right; line-height: 2; white-space: pre;
+}
+
+/* Gap record */
+.gap-record {
+  border: 1px solid var(--border); margin-bottom: 3.5rem;
+  opacity: 0; transition: opacity 1s ease;
+}
+.gap-record.visible { opacity: 1; }
+
+.gap-entry { border-bottom: 1px solid var(--dim); }
+.gap-entry:last-child { border-bottom: none; }
+
+.gap-entry-header {
+  padding: 0.5rem 1.2rem; background: var(--panel);
+  border-bottom: 1px solid var(--dim);
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.ge-label {
+  font-family: 'Spectral', serif; font-style: italic;
+  font-size: 0.82rem; color: var(--muted);
+}
+
+.ge-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.42rem; color: var(--faint); letter-spacing: 0.1em;
+}
+
+.gap-entry-cols {
+  display: grid; grid-template-columns: 1fr 1px 1fr;
+}
+
+.ge-col { padding: 0.75rem 1.2rem; background: var(--surface); }
+.ge-col.actual-col { background: var(--bg); }
+
+.ge-col-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.4rem; letter-spacing: 0.16em;
+  text-transform: uppercase; margin-bottom: 0.3rem;
+}
+.performed-col .ge-col-label { color: var(--performed); }
+.actual-col .ge-col-label { color: var(--actual); }
+
+.ge-col-divider { background: var(--border); }
+
+.ge-col-text {
+  font-family: 'Spectral', serif; font-size: 0.88rem;
+  line-height: 1.75; color: var(--text); white-space: pre-wrap;
+}
+
+/* Portrait */
+.result-rule {
+  width: 0; height: 1px; background: var(--performed);
+  margin-bottom: 2.5rem;
+  opacity: 0; transition: opacity 0.6s ease, width 1.2s ease 0.3s;
+}
+.result-rule.visible { opacity: 1; width: 100%; }
+
+.portrait-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--performed);
+  margin-bottom: 1.2rem;
+  opacity: 0; transition: opacity 0.6s ease;
+}
+.portrait-label.visible { opacity: 1; }
+
+.portrait-headline {
+  font-family: 'Spectral', serif; font-weight: 300;
+  font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+  line-height: 1.2; color: var(--ink); margin-bottom: 1.5rem;
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.portrait-headline.visible { opacity: 1; }
+
+.portrait-body {
+  font-family: 'Spectral', serif;
+  font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+  line-height: 2.1; color: var(--text); white-space: pre-wrap;
+  opacity: 0; transition: opacity 1.2s ease;
+}
+.portrait-body.visible { opacity: 1; }
+
+.portrait-sig {
+  font-family: 'Spectral', serif; font-style: italic;
+  font-size: clamp(0.9rem, 1.6vw, 1rem);
+  line-height: 1.9; color: var(--performed);
+  border-left: 1px solid var(--border); padding-left: 1.2rem;
+  margin-top: 1.5rem;
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.portrait-sig.visible { opacity: 1; }
+
+.disc-wrap {
+  margin-top: 2.5rem; border: 1px solid var(--border);
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.disc-wrap.visible { opacity: 1; }
+
+.disc-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.55rem 1.2rem; background: var(--panel);
+  border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 0.4rem;
+}
+.disc-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--muted);
+}
+.disc-note {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.4rem; color: var(--faint); letter-spacing: 0.1em;
+}
+.disc-item {
+  display: flex; gap: 0.8rem; align-items: flex-start;
+  padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--dim);
+  background: var(--surface);
+}
+.disc-item:last-child { border-bottom: none; }
+.disc-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.42rem; color: var(--faint); flex-shrink: 0; padding-top: 0.2rem;
+}
+.disc-q {
+  font-family: 'Spectral', serif; font-size: 0.92rem;
+  color: var(--text); line-height: 1.7;
+}
+
+.result-footer {
+  margin-top: 3.5rem; padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 0.8rem;
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.result-footer.visible { opacity: 1; }
+.footer-note {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.1em; color: var(--faint); font-style: italic;
+}
+.footer-btns { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.result-btn {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); font-family: 'DM Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 0.5rem 1rem; cursor: pointer; transition: all 0.2s;
+}
+.result-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+@media (max-width: 580px) {
+  .sides-wrap { grid-template-columns: 1fr; }
+  .side-divider { height: 1px; width: 100%; margin: 0.8rem 0; }
+  .side-divider::after { transform: translate(-50%, -50%) rotate(0deg); }
+  .side-panel.performed-panel { padding-right: 0; }
+  .side-panel.actual-panel { padding-left: 0; }
+  .axis-preview { grid-template-columns: 1fr; }
+  .axis-col { border-right: none; border-bottom: 1px solid var(--border); }
+  .axis-col:last-child { border-bottom: none; }
+  .gap-entry-cols { grid-template-columns: 1fr; }
+  .ge-col-divider { height: 1px; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="prog-wrap"><div class="prog-fill" id="progFill"></div></div>
+
+<!-- SAFEGUARDING OVERLAY -->
+<div id="safeguard">
+  <div class="safeguard-inner">
+    <div class="safeguard-title">Before you begin</div>
+    <div class="safeguard-body">
+      This instrument asks about moments when you said yes to something you didn't fully want — across everyday social situations and more intimate ones.<br><br>
+      You are <strong>never required to disclose</strong> anything you're not comfortable sharing. Vague or incomplete answers are fine. You can stop at any point.<br><br>
+      This is a private reflection. The result is yours.
+    </div>
+    <div class="safeguard-note">
+      If anything you write relates to an experience you found harmful or distressing — or if this raises something you'd like to talk to someone about — please speak to a trusted adult or contact a support service.
+    </div>
+    <div class="safeguard-btns">
+      <button class="sg-btn" onclick="dismissSafeguard()">I understand — continue</button>
+      <button class="sg-btn sg-exit" onclick="window.history.back()">Leave this page</button>
+    </div>
+  </div>
+</div>
+
+<!-- INTRO -->
+<div id="intro" class="screen">
+  <div class="intro-header">
+    <div class="intro-kicker">Individual &amp; Society · Grades 11–12<br>Consent &amp; Identity</div>
+    <div class="intro-id" id="sessionId"></div>
+  </div>
+
+  <div class="intro-body">
+    <div class="intro-title">When <em>Yes</em><br>Means No</div>
+    <div class="intro-tagline">What conditions produce a yes that means something else.</div>
+
+    <p class="intro-premise">
+      You have said yes when you meant no.<br>
+      Not in dramatic moments — in ordinary ones.<br><br>
+      <strong>This instrument asks about those moments.</strong><br><br>
+      Six prompts, two sides each — what you performed, and what you actually felt or wanted. The gap between the two is the data.<br><br>
+      The last prompt turns outward: have you ever been the person who misread someone else's yes?
+    </p>
+
+    <div class="axis-preview">
+      <div class="axis-col performed-col">
+        <div class="axis-label">Performed</div>
+        <div class="axis-desc">What you said, did, or showed — the version that was visible.</div>
+      </div>
+      <div class="axis-col actual-col">
+        <div class="axis-label">Actual</div>
+        <div class="axis-desc">What you felt or wanted — the version that wasn't.</div>
+      </div>
+    </div>
+
+    <button class="begin-btn" onclick="begin()">Begin →</button>
+  </div>
+
+  <div class="intro-footer">
+    <div class="intro-footer-note">The result is yours. You decide what, if anything, enters the room.</div>
+    <div class="intro-footer-note" id="sessionNote"></div>
+  </div>
+</div>
+
+<!-- PROMPT ROOM -->
+<div id="room" class="screen">
+  <div class="room-hud">
+    <div class="hud-counter">Prompt <span id="qNum">1</span> of <span id="qTotal"></span></div>
+    <div class="hud-note" id="hudNote"></div>
+  </div>
+
+  <div class="prompt-text" id="promptText"></div>
+  <div class="prompt-sub" id="promptSub"></div>
+
+  <div class="sides-wrap" id="sidesWrap">
+    <div class="side-panel performed-panel">
+      <div class="side-label">Performed</div>
+      <div class="side-prompt" id="performedPrompt"></div>
+      <textarea class="side-input" id="performedInput"
+        placeholder="What you said, did, or showed…"
+        rows="3" oninput="onType('performed')"></textarea>
+      <div class="side-hint" id="performedHint"></div>
+    </div>
+    <div class="side-divider"></div>
+    <div class="side-panel actual-panel">
+      <div class="side-label">Actual</div>
+      <div class="side-prompt" id="actualPrompt"></div>
+      <textarea class="side-input" id="actualInput"
+        placeholder="What you felt or wanted…"
+        rows="3" oninput="onType('actual')"></textarea>
+      <div class="side-hint" id="actualHint"></div>
+    </div>
+  </div>
+
+  <div class="room-nav">
+    <div class="nav-note" id="navNote">Both sides required.</div>
+    <button class="nav-btn primary" id="nextBtn" onclick="nextPrompt()" disabled>Next →</button>
+  </div>
+</div>
+
+<!-- READING -->
+<div id="reading" class="screen">
+  <div class="reading-label">Reading the gap</div>
+  <div class="reading-dots"><span></span><span></span><span></span></div>
+</div>
+
+<!-- RESULT -->
+<div id="result" class="screen">
+  <div class="result-header">
+    <div class="result-title">When <em>Yes</em> Means No</div>
+    <div class="result-stamp" id="resultStamp"></div>
+  </div>
+
+  <div class="gap-record" id="gapRecord"></div>
+
+  <div class="result-rule" id="resultRule"></div>
+  <div class="portrait-label" id="portraitLabel">Reading</div>
+  <div class="portrait-headline" id="portraitHeadline"></div>
+  <div class="portrait-body" id="portraitBody"></div>
+  <div class="portrait-sig" id="portraitSig"></div>
+
+  <div class="disc-wrap" id="discWrap">
+    <div class="disc-header">
+      <div class="disc-label">For discussion</div>
+      <div class="disc-note">Derived from this record · for teacher use</div>
+    </div>
+    <div id="discList"></div>
+  </div>
+
+  <div class="result-footer" id="resultFooter">
+    <div class="footer-note">What conditions produce a yes that means something else.</div>
+    <div class="footer-btns">
+      <button class="result-btn" onclick="window.print()">Save / Print</button>
+      <button class="result-btn" onclick="restart()">Start again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PROXY = "https://anthropic-proxy.justin-steinmetz.workers.dev";
+
+const PROMPTS = [
+  {
+    label: "A social agreement",
+    q: "A moment when you agreed to something social — going somewhere, doing something with someone, staying longer than you wanted — when you didn't fully want to.",
+    sub: "Something low-stakes but real. Not a crisis — an ordinary moment.",
+    performed: { q: "What did you say, do, or show?", min: 15 },
+    actual:    { q: "What did you actually feel or want?", min: 15 }
+  },
+  {
+    label: "Staying past the point",
+    q: "A situation where you continued something — a conversation, a dynamic, a relationship — past the point where you wanted to.",
+    sub: "What kept you there when part of you wanted to leave?",
+    performed: { q: "What did you do — how did you stay?", min: 15 },
+    actual:    { q: "What were you actually feeling, and what was making it hard to leave?", min: 20 }
+  },
+  {
+    label: "Performed enthusiasm",
+    q: "A time you performed enthusiasm, agreement, or willingness that you didn't genuinely feel.",
+    sub: "Could be physical affection, excitement about a plan, agreement with a view — anything where your outside and inside were different.",
+    performed: { q: "What did the performance look like?", min: 15 },
+    actual:    { q: "What was the performance for — what would have happened if you hadn't performed it?", min: 20 }
+  },
+  {
+    label: "The cost of no",
+    q: "Something you agreed to because saying no felt too costly — socially, relationally, emotionally.",
+    sub: null,
+    performed: { q: "What did you agree to?", min: 10 },
+    actual:    { q: "What did you imagine the cost of refusal would be? Was that calculation accurate?", min: 20 }
+  },
+  {
+    label: "The no you didn't say",
+    q: "A time you wanted to say no and didn't. What stopped you?",
+    sub: "You don't need to name the specific situation. Name what stopped you.",
+    performed: { q: "What did you do instead of saying no?", min: 10 },
+    actual:    { q: "What was the thing that made refusal feel unavailable — pressure, expectation, fear, care for the other person, something else?", min: 25 }
+  },
+  {
+    label: "The yes you misread",
+    q: "Have you ever been on the other side — the person who took someone else's yes at face value when it may not have been what they fully meant?",
+    sub: "This prompt turns outward. You are now the reader of someone else's gap. What did you miss, or not look for?",
+    performed: { q: "What did you take their yes to mean?", min: 10 },
+    actual:    { q: "What do you think may have actually been happening for them — and what does it say about what you were looking for?", min: 20 }
+  }
+];
+
+const TOTAL = PROMPTS.length;
+let current = 0;
+let performedAnswers = new Array(TOTAL).fill('');
+let actualAnswers    = new Array(TOTAL).fill('');
+
+const sessionId = 'WYN-' + Math.random().toString(36).slice(2,4).toUpperCase() + '-' +
+                            Math.random().toString(36).slice(2,4).toUpperCase();
+
+document.getElementById('sessionId').textContent = sessionId;
+document.getElementById('sessionNote').textContent = sessionId;
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function dismissSafeguard() {
+  const sg = document.getElementById('safeguard');
+  sg.style.opacity = '0';
+  sg.style.transition = 'opacity 0.4s ease';
+  setTimeout(() => sg.style.display = 'none', 400);
+  show('intro');
+}
+
+function begin() {
+  document.getElementById('qTotal').textContent = TOTAL;
+  show('room');
+  renderPrompt(0);
+}
+
+function renderPrompt(index) {
+  current = index;
+  const p = PROMPTS[index];
+
+  document.getElementById('progFill').style.width = (index / TOTAL * 100) + '%';
+  document.getElementById('qNum').textContent = index + 1;
+  document.getElementById('hudNote').textContent = index === TOTAL - 1 ? 'Final prompt' : '';
+  document.getElementById('nextBtn').textContent = index === TOTAL - 1 ? 'Read the gap →' : 'Next →';
+  document.getElementById('nextBtn').disabled = true;
+
+  const ptEl = document.getElementById('promptText');
+  const psEl = document.getElementById('promptSub');
+  const swEl = document.getElementById('sidesWrap');
+
+  ptEl.classList.remove('visible');
+  psEl.classList.remove('visible');
+  swEl.classList.remove('visible');
+
+  setTimeout(() => {
+    ptEl.textContent = p.q;
+    psEl.textContent = p.sub || '';
+    psEl.style.display = p.sub ? '' : 'none';
+
+    document.getElementById('performedPrompt').textContent = p.performed.q;
+    document.getElementById('actualPrompt').textContent = p.actual.q;
+
+    const pi = document.getElementById('performedInput');
+    const ai = document.getElementById('actualInput');
+    pi.value = performedAnswers[index];
+    ai.value = actualAnswers[index];
+
+    updateHints(index);
+    checkComplete(index);
+
+    ptEl.classList.add('visible');
+    if (p.sub) psEl.classList.add('visible');
+    setTimeout(() => {
+      swEl.classList.add('visible');
+      setTimeout(() => pi.focus(), 100);
+    }, 150);
+  }, 70);
+}
+
+function onType(side) {
+  const pi = document.getElementById('performedInput');
+  const ai = document.getElementById('actualInput');
+  performedAnswers[current] = pi.value;
+  actualAnswers[current]    = ai.value;
+  updateHints(current);
+  checkComplete(current);
+}
+
+function updateHints(index) {
+  const p = PROMPTS[index];
+  const pv = performedAnswers[index].trim();
+  const av = actualAnswers[index].trim();
+  document.getElementById('performedHint').textContent =
+    pv.length < p.performed.min ? 'keep going' : '';
+  document.getElementById('actualHint').textContent =
+    av.length < p.actual.min ? 'keep going' : '';
+}
+
+function checkComplete(index) {
+  const p = PROMPTS[index];
+  const pOk = performedAnswers[index].trim().length >= p.performed.min;
+  const aOk = actualAnswers[index].trim().length >= p.actual.min;
+  document.getElementById('nextBtn').disabled = !(pOk && aOk);
+}
+
+function nextPrompt() {
+  if (current === TOTAL - 1) {
+    readGap();
+  } else {
+    renderPrompt(current + 1);
+  }
+}
+
+// ── READ ──
+async function readGap() {
+  document.getElementById('progFill').style.width = '100%';
+  show('reading');
+
+  const record = PROMPTS.map((p, i) => {
+    const pv = (performedAnswers[i] || '').trim();
+    const av = (actualAnswers[i] || '').trim();
+    const pTag = !pv ? ' [empty]' : pv.length < 10 ? ' [minimal]' : '';
+    const aTag = !av ? ' [empty]' : av.length < 10 ? ' [minimal]' : '';
+    return `Prompt ${i+1} — ${p.label}:\n  Performed: ${pv || '[no answer]'}${pTag}\n  Actual: ${av || '[no answer]'}${aTag}`;
+  }).join('\n\n');
+
+  const prompt = `You have administered WHEN YES MEANS NO, an identity instrument examining the gap between performed willingness and actual desire or feeling. The student is aged 16–18.
+
+The instrument asks about ordinary moments when someone said or showed yes when they meant something different. The six prompts move from low-stakes social situations toward more intimate ones, and the final prompt turns outward — asking whether the student has ever been the person who misread someone else's yes.
+
+This is grounded in research on socialised consent: the difficulty identifying one's own desire, the structural cost of refusal, and the ways gender norms and social scripts make yes feel like the only available answer even when it isn't.
+
+Here is the complete gap record:
+
+${record}
+
+Your task is to read the gap between Performed and Actual across all six prompts as a structural analysis — not a psychological diagnosis, not moral evaluation.
+
+What you are reading for:
+
+1. PATTERN: what is systematically produced across these six gaps? What conditions keep appearing as reasons the yes was performed rather than genuine? Name the pattern — social cost, relational care, fear of conflict, gendered expectation, something else.
+
+2. THE SIXTH PROMPT is the most important. It is where the student looks outward and examines whether they have been the reader of someone else's gap. Read it carefully. Does the student show genuine reflection on what they missed or didn't look for? Or does it read as deflection? Name what you find.
+
+3. ABSENCE: [empty] and [minimal] answers — particularly on prompts 5 and 6 — are primary data. What a student cannot or will not name is worth naming.
+
+4. THE STRUCTURAL ARGUMENT: this instrument is not about individual weakness. The performed yeses are not personal failures. They are produced by conditions — social scripts, power dynamics, the unequal distribution of the cost of refusal. The reading should name those conditions as they appear in this specific record.
+
+Rules:
+- Do not use therapeutic language: not 'healing', not 'journey', not 'authentic self', not 'trauma response', not 'boundaries'.
+- Do not moralise. Do not praise. Do not reassure.
+- Write in second person. Do not begin with 'You'.
+- The final sentence should locate the student in the gap — not direct them somewhere.
+- Do not suggest the student seek professional help unless their answers indicate genuine distress — and even then, do so only once, plainly, without alarm.
+
+Output format — exactly:
+
+HEADLINE:
+[4–8 words. Names the structural pattern this gap record reveals. Not a personality type — a condition or mechanism.]
+
+READING:
+[200–270 words. Names the pattern of conditions that produced the performed yeses. Addresses the sixth prompt directly. Notes significant absences. Does not resolve. Does not end hopefully.]
+
+SIGNATURE:
+[One sentence. The most specific structural thing this record reveals — traceable to at least two prompts.]
+
+DISCUSSION:
+Q1: [Derived from the most consistent structural condition across the six prompts]
+Q2: [Derived from prompt 6 — the outward turn — and what it reveals about how the student reads others' consent]
+Q3: [Derived from the gap between what refusal would have cost and whether that cost was real or imagined]`;
+
+  try {
+    const resp = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1100,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content.map(b => b.text || '').join('');
+
+    const headlineMatch  = text.match(/HEADLINE:\s*([\s\S]+?)(?=READING:|$)/i);
+    const readingMatch   = text.match(/READING:\s*([\s\S]+?)(?=SIGNATURE:|$)/i);
+    const signatureMatch = text.match(/SIGNATURE:\s*([\s\S]+?)(?=DISCUSSION:|$)/i);
+    const discMatch      = text.match(/DISCUSSION:\s*([\s\S]+)/i);
+
+    showResult(
+      headlineMatch  ? headlineMatch[1].trim()  : '—',
+      readingMatch   ? readingMatch[1].trim()   : text,
+      signatureMatch ? signatureMatch[1].trim() : '',
+      discMatch      ? discMatch[1].trim()      : ''
+    );
+  } catch(err) {
+    showResult('—', 'The reading could not be completed. The record remains yours.', '', '');
+  }
+}
+
+function showResult(headline, reading, signature, discussion) {
+  show('result');
+
+  const now = new Date();
+  document.getElementById('resultStamp').textContent =
+    sessionId + '\n' +
+    now.toLocaleDateString('en-GB') + ' ' +
+    now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+  // Gap record
+  const container = document.getElementById('gapRecord');
+  container.innerHTML = '';
+
+  PROMPTS.forEach((p, i) => {
+    const entry = document.createElement('div');
+    entry.className = 'gap-entry';
+
+    const header = document.createElement('div');
+    header.className = 'gap-entry-header';
+    const lbl = document.createElement('div');
+    lbl.className = 'ge-label'; lbl.textContent = p.label;
+    const num = document.createElement('div');
+    num.className = 'ge-num'; num.textContent = `Prompt ${i+1}`;
+    header.appendChild(lbl); header.appendChild(num);
+
+    const cols = document.createElement('div');
+    cols.className = 'gap-entry-cols';
+
+    const makeCol = (cls, labelText, val) => {
+      const col = document.createElement('div');
+      col.className = `ge-col ${cls}`;
+      const lbl = document.createElement('div');
+      lbl.className = 'ge-col-label'; lbl.textContent = labelText;
+      const txt = document.createElement('div');
+      txt.className = 'ge-col-text';
+      txt.textContent = val || '[no entry]';
+      col.appendChild(lbl); col.appendChild(txt);
+      return col;
+    };
+
+    const divider = document.createElement('div');
+    divider.className = 'ge-col-divider';
+
+    cols.appendChild(makeCol('performed-col', 'Performed', performedAnswers[i]));
+    cols.appendChild(divider);
+    cols.appendChild(makeCol('actual-col', 'Actual', actualAnswers[i]));
+
+    entry.appendChild(header); entry.appendChild(cols);
+    container.appendChild(entry);
+  });
+
+  setTimeout(() => container.classList.add('visible'), 200);
+
+  setTimeout(() => {
+    document.getElementById('resultRule').classList.add('visible');
+    setTimeout(() => {
+      document.getElementById('portraitLabel').classList.add('visible');
+      document.getElementById('portraitHeadline').textContent = headline;
+      document.getElementById('portraitBody').textContent = reading;
+      document.getElementById('portraitSig').textContent = signature;
+      setTimeout(() => document.getElementById('portraitHeadline').classList.add('visible'), 200);
+      setTimeout(() => document.getElementById('portraitBody').classList.add('visible'), 700);
+      setTimeout(() => document.getElementById('portraitSig').classList.add('visible'), 1500);
+    }, 400);
+  }, 1400);
+
+  if (discussion) {
+    const list = document.getElementById('discList');
+    list.innerHTML = '';
+    discussion.split('\n').filter(l => l.trim()).forEach((line, i) => {
+      const cleaned = line.replace(/^Q\d+:\s*/i, '').trim();
+      if (!cleaned) return;
+      const item = document.createElement('div');
+      item.className = 'disc-item';
+      const num = document.createElement('div');
+      num.className = 'disc-num'; num.textContent = String(i+1).padStart(2,'0');
+      const q = document.createElement('div');
+      q.className = 'disc-q'; q.textContent = cleaned;
+      item.appendChild(num); item.appendChild(q);
+      list.appendChild(item);
+    });
+    setTimeout(() => document.getElementById('discWrap').classList.add('visible'), 3800);
+  }
+
+  setTimeout(() => document.getElementById('resultFooter').classList.add('visible'), 4600);
+}
+
+function restart() {
+  performedAnswers = new Array(TOTAL).fill('');
+  actualAnswers    = new Array(TOTAL).fill('');
+  current = 0;
+  document.getElementById('progFill').style.width = '0%';
+  document.getElementById('gapRecord').innerHTML = '';
+  document.getElementById('discList').innerHTML = '';
+  ['gapRecord','resultRule','portraitLabel','portraitHeadline',
+   'portraitBody','portraitSig','discWrap','resultFooter']
+    .forEach(id => document.getElementById(id).classList.remove('visible'));
+  show('intro');
+}
+</script>
+</body>
+</html>
